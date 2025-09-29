@@ -1,0 +1,52 @@
+{
+  "name": "peak",
+  "version": "0.0.0",
+  "description": "> TODO: description",
+  "author": "RESPRiT",
+  "homepage": "",
+  "license": "ISC",
+  "main": "dist/peak.js",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "format": "prettier --write .",
+    "lint": "pnpm run eslint && pnpm run prettier --check .",
+    "test": "vitest",
+    "watch": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "css-select": "^6.0.0",
+    "dom-serializer": "^2.0.0",
+    "domhandler": "^5.0.3",
+    "domutils": "^3.2.2",
+    "htmlparser2": "^10.0.0",
+    "kolmafia": "^5.28715.0",
+    "tome-kolmafia-mock": "npm:tome-kolmafia-mock^5.28557.2",
+    "libram": "^0.11.6",
+    "tome-kolmafia-lib": "^5.28557.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/helper-environment-visitor": "^7.24.7",
+    "@babel/helper-function-name": "^7.24.7",
+    "@babel/helper-hoist-variables": "^7.24.7",
+    "@babel/helper-split-export-declaration": "^7.24.7",
+    "@babel/plugin-transform-class-properties": "^7.27.1",
+    "@babel/plugin-transform-object-rest-spread": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "@babel/preset-typescript": "^7.27.1",
+    "@eslint/js": "^9.31.0",
+    "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@types/node": "^24.0.13",
+    "esbuild": "^0.25.6",
+    "esbuild-plugin-babel": "^0.2.3",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-libram": "^0.4.28",
+    "prettier": "^3.6.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.36.0",
+    "vitest": "^3.2.4"
+  },
+  "packageManager": "pnpm@10.17.1+sha512.17c560fca4867ae9473a3899ad84a88334914f379be46d455cbf92e5cf4b39d34985d452d2583baf19967fa76cb5c17bc9e245529d0b98745721aa7200ecaf7a"
+}

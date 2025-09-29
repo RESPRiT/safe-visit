@@ -1,0 +1,40 @@
+{
+  "name": "safe-visit-relay-hook",
+  "private": true,
+  "version": "0.0.0",
+  "description": "> TODO: description",
+  "author": "RESPRiT",
+  "homepage": "",
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "format": "prettier --write .",
+    "lint": "pnpm run eslint && pnpm run prettier --check .",
+    "test": "vitest",
+    "watch": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "kolmafia": "^5.28715.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.0",
+    "@babel/helper-environment-visitor": "^7.24.7",
+    "@babel/helper-function-name": "^7.24.7",
+    "@babel/helper-hoist-variables": "^7.24.7",
+    "@babel/helper-split-export-declaration": "^7.24.7",
+    "@babel/plugin-transform-class-properties": "^7.27.1",
+    "@babel/plugin-transform-object-rest-spread": "^7.28.0",
+    "@babel/preset-env": "^7.28.0",
+    "@babel/preset-typescript": "^7.27.1",
+    "@eslint/js": "^9.31.0",
+    "@types/node": "^24.0.13",
+    "esbuild": "^0.25.6",
+    "esbuild-plugin-babel": "^0.2.3",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.5",
+    "prettier": "^3.6.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.36.0"
+  }
+}

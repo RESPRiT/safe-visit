@@ -1,0 +1,7 @@
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.rhino.json" },
+    { "path": "./tsconfig.web.json" }
+  ]
+}

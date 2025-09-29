@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.rhino.json",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.iterable"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "paths": {
+      "kolmafia": ["./node_modules/tome-kolmafia-mock/dist"]
+    }
+  },
+  "include": ["src/relay/assets/**/*.ts", "packages/safe-visit-web/src/hook.ts", "packages/safe-visit-web/src/safeVisit.ts"],
+  "exclude": []
+}

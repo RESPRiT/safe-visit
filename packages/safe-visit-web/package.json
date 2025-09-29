@@ -1,0 +1,33 @@
+{
+  "name": "safe-visit-web",
+  "private": true,
+  "version": "0.0.0",
+  "description": "> TODO: description",
+  "author": "RESPRiT",
+  "homepage": "",
+  "license": "ISC",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "format": "prettier --write .",
+    "lint": "pnpm run eslint && pnpm run prettier --check .",
+    "test": "vitest",
+    "watch": "node build.mjs --watch"
+  },
+  "dependencies": {
+    "kolmafia": "npm:tome-kolmafia-mock@5.28557.2",
+    "libram": "^0.11.6",
+    "tome-kolmafia-lib": "^5.28557.2"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.31.0",
+    "@types/node": "^24.0.13",
+    "esbuild": "^0.25.6",
+    "eslint": "^9.31.0",
+    "eslint-config-prettier": "^10.1.5",
+    "eslint-plugin-libram": "^0.4.28",
+    "prettier": "^3.6.2",
+    "typescript": "^5.8.3",
+    "typescript-eslint": "^8.36.0"
+  }
+}
