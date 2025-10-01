@@ -1,8 +1,13 @@
 import { myName } from "kolmafia";
 import { canVisitUrl, gameDay } from "libram";
 
-function waitForMafia() {
-  console.log("Creating wait handler");
+import { remoteFunction, remoteProperty } from "./utils";
+
+async function waitForMafia() {
+  console.log("Creating wait handler!");
+  const test = await remoteFunction("myName");
+  const test2 = await remoteProperty("banishedMonsters");
+  console.log(test, test2);
 
   const findHrefRoot = (node: Node) => {
     console.log("Looking for relevant element");

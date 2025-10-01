@@ -1,4 +1,4 @@
-import { safeVisitPath } from "../../safe-visit-relay-hook/src/relay/main";
+const safeVisitPath = "safe-visit/index.js" as const;
 
 (function hookToWebpage() {
   if (window.top === null)
