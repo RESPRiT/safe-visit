@@ -27,12 +27,15 @@ TO-DO:
   - Observers don't work with frames!
 - [x] Add eventlistener to re-attach click listeners whenever frame content reloads
 - [x] Update mafia checks to use API calls
-- [ ] Clean up console logs and unused logic
+- [x] Clean up console logs and unused logic
 - [ ] Clean up use of async
 - [ ] Need to hardcode certain exceptions into canVisitUrl(), e.g. the Witchess chess can be escaped from at any time.
-- [ ] Add a timeout to the polling
+- [x] Add a timeout to the polling
+  - [ ] On timeout, allow user to proceed anyways (or keep waiting?)
 - [ ] Allow the ability to toggle waiting
   - [ ] Is there a way to check if a script is currently running to auto-toggle?
+- [ ] Extra niceties
+  - [ ] Improve polling by disallowing overlapping POST requests
 
 # utils.ts
 - [x] Implement (copy) mafia API logic
@@ -44,6 +47,11 @@ TO-DO:
 - [ ] Possibly refactor mafia API logic into its own script
 
 # Notes
+## Benchmarks
+Informal rough testing on my machine showed that:
+- The hook and event listener logic added trivial load times: ~1-2ms
+- The API check with mafia added very minor load times: ~10-20ms
+
 ## gCLI (and not-so-gCLI)
 ### Standard gCLI Behavior
 In mafia, the gCLI is "single-threaded," in that commands cannot run in parallel, and calling a command
@@ -80,3 +88,15 @@ ton of asynchronous handling for this to work well.
 
 However, for informational scripts, which retrieve information from mafia that is not blocked by other
 actions, having additional threads can be quite useful!
+
+## Limitations
+This script can intercept the start of a request to visit a URL, but once the request has been made, the
+script cannot prevent the response from being loaded by the browser.
+
+I don't know the exact behavior of this, but for certain links, such as visiting the Hall of Champions,
+where pages can take a long time to load (a few seconds), this _might_ mean that sometimes a script will
+clash with user navigation during the load time. This would only happen if the server refuses to send
+the response for the page if it detects that the player is not interuptable, **and I don't know if that's
+what it does.**
+
+This might not be a limitation, at all.
