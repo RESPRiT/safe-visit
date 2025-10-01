@@ -81,6 +81,11 @@ export async function apiCall(
       },
     }
   );
+  if (response.status === 401) {
+    // our pwd is stale, refresh
+    window.location.reload();
+  }
+
   const json = await response.json();
   if ("error" in json) {
     throw new Error(json.error);
@@ -111,7 +116,7 @@ export function getHashIfAvailable(): string {
 }
 
 export async function updateHashFromServer(): Promise<void> {
-  const response = await fetch("/api.php?what=status&for=tome-kolmafia");
+  const response = await fetch("/api.php?what=status&for=safe-visit");
   const apiObject = await response.json();
   const newHash = apiObject?.pwd ?? null;
   lastHash = newHash;

@@ -1,4 +1,4 @@
-import { remoteFunctions } from "./utils";
+import { remoteFunction, remoteFunctions } from "./utils";
 
 async function canVisitUrl(): Promise<boolean> {
   const res = await remoteFunctions([
@@ -73,20 +73,19 @@ async function waitForMafia() {
       return new Promise((resolve) => {
         const start = Date.now();
 
-        async function check() {
+        async function check(delay = 80) {
           const canVisit = await canVisitUrl();
           if (canVisit) {
-            clearInterval(timer);
             resolve(Date.now() - start);
-          } else if (Date.now() - start >= 5000) {
-            clearInterval(timer);
+          } else if (Date.now() - start < 5000) {
+            setTimeout(() => check(delay * 2), delay);
+          } else {
             resolve(
               console.error("5s timeout waiting for mafia, proceeding unsafely")
             );
           }
         }
 
-        const timer = setInterval(check, 100);
         check();
       });
     }
@@ -118,6 +117,11 @@ async function waitForMafia() {
     attachHandler(frame);
   }
 
+  console.log("[safe-visit] Script is now active");
+  remoteFunction("print", [
+    "If you are seeing this message, safe-visit is active in your relay browser. To disable safe-visit, [do X].",
+    "green",
+  ]);
   // **CONICALLY RETURN UN-LISTEN CALLBACK**
   return () =>
     [...frames].forEach((f) =>

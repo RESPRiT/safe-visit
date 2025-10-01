@@ -17,5 +17,5 @@ const safeVisitPath = "safe-visit/index.js" as const;
     return;
 
   head.insertBefore(script, null);
-  console.log("Succesfully hooked into relay browser!");
+  console.log("[safe-visit] Succesfully hooked into relay browser!");
 })();

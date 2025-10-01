@@ -43,6 +43,9 @@ TO-DO:
 # dom.ts
 - [ ] Drawing loading indicator to show when requests have been paused
 
+# misc
+- [ ] Allow user to easily disable `safe-visit`
+
 # Architecture
 - [ ] Possibly refactor mafia API logic into its own script
 
