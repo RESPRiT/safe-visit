@@ -1,13 +1,19 @@
-import { myName } from "kolmafia";
-import { canVisitUrl, gameDay } from "libram";
+import { remoteFunctions } from "./utils";
 
-import { remoteFunction, remoteProperty } from "./utils";
+async function canVisitUrl(): Promise<boolean> {
+  const res = await remoteFunctions([
+    "currentRound",
+    "inMultiFight",
+    "choiceFollowsFight",
+    "handlingChoice",
+  ]);
+  if (res === null) throw new Error("canVisitUrl() should not return null");
+
+  return res.every((ret) => !ret);
+}
 
 async function waitForMafia() {
   console.log("Creating wait handler!");
-  const test = await remoteFunction("myName");
-  const test2 = await remoteProperty("banishedMonsters");
-  console.log(test, test2);
 
   const findHrefRoot = (node: Node) => {
     console.log("Looking for relevant element");
@@ -69,10 +75,9 @@ async function waitForMafia() {
       return new Promise((resolve, reject) => {
         const start = Date.now();
 
-        const check = () => {
-          const canVisit = canVisitUrl();
+        async function check() {
+          const canVisit = await canVisitUrl();
           console.log("Polling...", Date.now() - start, canVisit);
-          console.log(myName(), gameDay());
           if (canVisit) {
             clearInterval(timer);
             resolve(Date.now() - start);
@@ -80,7 +85,7 @@ async function waitForMafia() {
             clearInterval(timer);
             reject(new Error("Timeout waiting for mafia"));
           }
-        };
+        }
 
         const timer = setInterval(check, 100);
         console.log("Seeing if we should wait");
@@ -122,11 +127,6 @@ async function waitForMafia() {
       );
     }
   }
-  /*
-  [...frames].forEach((f) =>
-    f.contentDocument?.addEventListener("click", handler, true)
-  );
-  */
 
   // document.addEventListener("click", handler, true);
   console.log("Wait handler created!", document);

@@ -24,7 +24,10 @@ export async function remoteProperty(property: string) {
   return res.properties[0];
 }
 
-export async function remoteFunction(name: string, args: string[] = []) {
+export async function remoteFunction(
+  name: string,
+  args: (string | number)[] = []
+) {
   const pwd = await getHash();
   const res = await apiCall(
     {
@@ -37,6 +40,27 @@ export async function remoteFunction(name: string, args: string[] = []) {
   if (res.functions === undefined) return null;
 
   return res.functions[0];
+}
+
+export async function remoteFunctions(
+  names: string[],
+  args?: (string | number)[][]
+) {
+  const pwd = await getHash();
+  const res = await apiCall(
+    {
+      functions: names.map((name, i) => ({
+        name,
+        args: args === undefined ? [] : args[i],
+      })),
+    },
+    pwd
+  );
+
+  // void functions
+  if (res.functions === undefined) return null;
+
+  return res.functions;
 }
 
 export async function apiCall(
