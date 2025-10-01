@@ -17,13 +17,15 @@ TO-DO:
   - [x] esbuild/vite?
   - [x] typescript
   - [x] eslint
-- [ ] Setup symlinks between dist folders and mafia folder
+- [o] Setup symlinks between dist folders and mafia folder
 - [ ] Setup build files for monorepo building
   - [ ] package.json
 - [ ] Setup git workflow for release branch
 
 # index.ts
-- [ ] Create observer that re-attaches click listeners whenever a new frame is loaded
+- [x] ~~Create observer that re-attaches click listeners whenever a new frame is loaded~~
+  - Observers don't work with frames!
+- [x] Add eventlistener to re-attach click listeners whenever frame content reloads
 - [x] Update mafia checks to use API calls
 - [ ] Clean up console logs and unused logic
 - [ ] Clean up use of async

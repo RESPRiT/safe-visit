@@ -13,64 +13,61 @@ async function canVisitUrl(): Promise<boolean> {
 }
 
 async function waitForMafia() {
+  // **SETUP HANDLER FOR LISTENER**
   console.log("Creating wait handler!");
-
-  const findHrefRoot = (node: Node) => {
-    console.log("Looking for relevant element");
-    // We have to do this to get types because of ~realms~:
-    // Basically, the frames have their own constructors for
-    //  things like Window, etc., which breaks typechecks,
-    //  so you need to access their realm-local constructors
-    const w: Window & typeof globalThis =
-      node.ownerDocument?.defaultView || window;
-
-    while (node !== null && !(node instanceof w.Document)) {
-      if (
-        node instanceof w.HTMLAnchorElement ||
-        node instanceof w.HTMLAreaElement
-      ) {
-        console.log("Element found!", node);
-        return node;
-      }
-      if (!(node instanceof w.Node))
-        throw new Error("Root node of target isn't a document");
-
-      node = node.parentNode as Node;
-    }
-
-    return null;
-  };
-
-  // TODO: Handle keyboard navigation to trigger links, i.e. tab -> enter
   async function handler(e: MouseEvent) {
+    // STEP 1: CONDITIONAL CLICK HIJACKING
     console.log("Handler triggered");
     if (e.defaultPrevented) return;
     if (e.target === null) return;
 
+    const findHrefRoot = (node: Node) => {
+      console.log("Looking for relevant element");
+      // We have to do this to get types because of ~realms~:
+      // Basically, the <frames> have their own constructors for
+      //  things like Window, etc., which breaks typechecks,
+      //  so you need to access their realm-local constructors
+      const w: Window & typeof globalThis =
+        node.ownerDocument?.defaultView || window;
+
+      while (node !== null && !(node instanceof w.Document)) {
+        if (
+          node instanceof w.HTMLAnchorElement ||
+          node instanceof w.HTMLAreaElement
+        ) {
+          console.log("Element found!", node);
+          return node;
+        }
+        if (!(node instanceof w.Node))
+          throw new Error("Root node of target isn't a document");
+
+        node = node.parentNode as Node;
+      }
+
+      return null;
+    };
     // I think I can assume Node type for click events on a <frame>
     const a = findHrefRoot(e.target as Node);
     if (a === null) return;
 
-    // console.log("Checking link whitelist");
     const linkWhitelist = [
       "#",
-      "awesomemenu.php", // mafia relay menu
       "/KoLmafia/logout",
+      "awesomemenu.php",
       "adminmail.php",
       "mchat.php",
       "static.php",
       "http://", // external links
       "https://",
     ];
-    // if we check a.href, it will return the full URL and include http(s)
+    // if we check a.href, it will return the full URL and include http(s),
+    // so, we check the attribute manually via getAttribute, instead
     if (linkWhitelist.some((s) => a.getAttribute("href")?.includes(s))) return;
-
-    // console.log("Checking if left-click");
     if (e.button !== 0) return; // only trigger on left-click
 
-    // console.log("Preventing link follow");
     e.preventDefault();
 
+    // STEP 2: DELAY FUNCTION
     async function waitUntilCanVisit() {
       return new Promise((resolve, reject) => {
         const start = Date.now();
@@ -92,9 +89,9 @@ async function waitForMafia() {
         check();
       });
     }
-
     await waitUntilCanVisit();
 
+    // STEP 3: VISIT LINK
     console.log("Done waiting, visiting link");
     const frame: HTMLFrameElement | null = document.querySelector(
       "frame[name=mainpane]"
@@ -105,10 +102,7 @@ async function waitForMafia() {
     frame.contentWindow.location.href = a.href;
   }
 
-  const frames = document.querySelectorAll("frame");
-  for (const frame of frames) {
-    console.log(frame, frame.contentDocument, frame.contentWindow);
-    //frame.addEventListener("load", () => console.log("loaded!", frame));
+  const attachHandler = (frame: HTMLFrameElement) => {
     if (frame.contentDocument === null)
       throw new Error(`Cannot find document for ${frame.name}`);
 
@@ -126,11 +120,23 @@ async function waitForMafia() {
         { once: true }
       );
     }
+  };
+
+  // **ATTACH HANDLER TO FRAMES**
+  const frames = document.querySelectorAll("frame");
+  for (const frame of frames) {
+    console.log(
+      "Attaching listener and observer",
+      frame,
+      frame.contentDocument,
+      frame.contentWindow
+    );
+    // re-attach handler whenever frame content is reloaded
+    frame.addEventListener("load", () => attachHandler(frame));
+    attachHandler(frame);
   }
 
-  // document.addEventListener("click", handler, true);
-  console.log("Wait handler created!", document);
-
+  // **CONICALLY RETURN UN-LISTEN CALLBACK**
   return () =>
     [...frames].forEach((f) =>
       f.contentDocument?.removeEventListener("click", handler, true)
