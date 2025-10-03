@@ -1,143 +1,91 @@
 import { appendLoadingDiv } from "./dom";
-import { remoteFunction, remoteFunctions } from "./utils";
+import { canVisitUrl, findHrefRoot, notifyUser, visitUrl } from "./utils";
+
+const linkWhitelist = [
+  "#",
+  "KoLmafia/logout",
+  "awesomemenu.php",
+  "adminmail.php",
+  "mchat.php",
+  "static.php",
+  // external links
+  "http://",
+  "https://",
+] as const;
 
 let locked = false;
 
-async function canVisitUrl(): Promise<boolean> {
-  const res = await remoteFunctions([
-    "currentRound",
-    "inMultiFight",
-    "choiceFollowsFight",
-    "handlingChoice",
-  ]);
-  if (res === null) throw new Error("canVisitUrl() should not return null");
+async function waitUntilCanVisit() {
+  return new Promise((resolve) => {
+    const start = Date.now();
 
-  return res.every((ret) => !ret);
+    async function check(delay: number, first = false) {
+      const canVisit = await canVisitUrl();
+      if (canVisit) {
+        locked = false;
+        resolve(Date.now() - start);
+      } else if (Date.now() - start < 10000) {
+        if (first) appendLoadingDiv();
+        locked = true;
+        setTimeout(() => check(delay * 2), delay);
+      } else {
+        locked = false;
+        resolve(
+          console.error("10s timeout waiting for mafia, proceeding unsafely")
+        );
+      }
+    }
+    check(80, true);
+  });
 }
 
-async function waitForMafia() {
-  // **SETUP HANDLER FOR LISTENER**
-  // We use the MouseEvent type, but this logic also works for key input
-  async function handler(e: MouseEvent) {
-    // STEP 1: CONDITIONAL CLICK HIJACKING
-    if (e.defaultPrevented) return;
-    if (e.target === null) return;
+// We use the MouseEvent type, but this logic also works for key input
+async function handleInput(e: MouseEvent) {
+  // Always prevent link visits when locked
+  if (locked) return e.preventDefault();
 
-    const findHrefRoot = (node: Node) => {
-      // We have to do this to get types because of ~realms~:
-      // Basically, the <frames> have their own constructors for
-      //  things like Window, etc., which breaks typechecks,
-      //  so you need to access their realm-local constructors
-      const w: Window & typeof globalThis =
-        node.ownerDocument?.defaultView || window;
+  // Check if event is dead or stale
+  if (e.defaultPrevented) return;
+  if (e.target === null) return;
 
-      while (node !== null && !(node instanceof w.Document)) {
-        if (
-          node instanceof w.HTMLAnchorElement ||
-          node instanceof w.HTMLAreaElement
-        ) {
-          return node;
-        }
-        if (!(node instanceof w.Node))
-          throw new Error("Root node of target isn't a document");
+  // Check if input is left-click (or keyboard equivalent)
+  if (e.button !== 0) return;
 
-        node = node.parentNode as Node;
-      }
+  // Check if clicked element (or parent) has a link/href
+  const a = findHrefRoot(e.target as Node);
+  if (a === null) return;
 
-      return null;
-    };
-    // I think I can assume Node type for click events on a <frame>
-    const a = findHrefRoot(e.target as Node);
-    if (a === null) return;
+  // Check if link should be ignored via whitelisted
+  if (linkWhitelist.some((s) => a.getAttribute("href")?.includes(s))) return;
 
-    const linkWhitelist = [
-      "#",
-      "/KoLmafia/logout",
-      "awesomemenu.php",
-      "adminmail.php",
-      "mchat.php",
-      "static.php",
-      "http://", // external links
-      "https://",
-    ];
-    // if we check a.href, it will return the full URL and include http(s),
-    //  so, we check the attribute manually via getAttribute, instead
-    if (
-      linkWhitelist.some(
-        (s) =>
-          a.getAttribute("href") === null || a.getAttribute("href")?.includes(s)
-      )
-    )
-      return;
-    if (e.button !== 0) return; // only trigger on left-click
-    e.preventDefault();
-    if (locked) return;
+  // Finally, prevent link visit, wait until safe, then visit link
+  e.preventDefault();
+  await waitUntilCanVisit();
+  visitUrl(a.href);
+}
 
-    // STEP 2: DELAY FUNCTION
-    async function waitUntilCanVisit() {
-      return new Promise((resolve) => {
-        const start = Date.now();
+const attachHandler = (frame: HTMLFrameElement) => {
+  if (frame.contentDocument === null)
+    throw new Error(`Cannot find document for ${frame.name}`);
+  frame.contentDocument.addEventListener("click", handleInput, true);
+};
 
-        async function check(delay: number, first = false) {
-          const canVisit = await canVisitUrl();
-          if (canVisit) {
-            locked = false;
-            resolve(Date.now() - start);
-          } else if (Date.now() - start < 10000) {
-            if (first) appendLoadingDiv();
-            locked = true;
-            setTimeout(() => check(delay * 2), delay);
-          } else {
-            locked = false;
-            resolve(
-              console.error(
-                "10s timeout waiting for mafia, proceeding unsafely"
-              )
-            );
-          }
-        }
-
-        check(80, true);
-      });
-    }
-    await waitUntilCanVisit();
-
-    // STEP 3: VISIT LINK
-    const frame: HTMLFrameElement | null = document.querySelector(
-      "frame[name=mainpane]"
-    );
-    if (frame === null || frame.contentWindow === null)
-      throw new Error("Could not find mainpane window");
-    frame.contentWindow.location.href = a.href;
-  }
-
-  const attachHandler = (frame: HTMLFrameElement) => {
-    if (frame.contentDocument === null)
-      throw new Error(`Cannot find document for ${frame.name}`);
-
-    frame.contentDocument.addEventListener("click", handler, true);
-  };
-
-  // **ATTACH HANDLER TO FRAMES**
+const attachHandlers = () => {
   const frames = document.querySelectorAll("frame");
   frames.forEach((frame) => {
     // re-attach handler whenever frame content is reloaded
-    //  sometimes, this is redundant (i.e. toast-style pop-ups)
+    //  sometimes, this is redundant (i.e. "new event" banners)
     //  but, that's OK, because the listener is not double-added
     frame.addEventListener("load", () => attachHandler(frame));
     attachHandler(frame);
   });
 
-  console.log("[safe-visit] Script is now active");
-  remoteFunction("print", [
-    "If you are seeing this message, safe-visit is active in your relay browser. To disable safe-visit, [do X].",
-    "orange",
-  ]);
-  // **CONICALLY RETURN UN-LISTEN CALLBACK**
   return () =>
     [...frames].forEach((f) =>
-      f.contentDocument?.removeEventListener("click", handler, true)
+      f.contentDocument?.removeEventListener("click", handleInput, true)
     );
-}
+};
 
-waitForMafia();
+attachHandlers();
+notifyUser();
+console.log("[safe-visit] Script is now active");

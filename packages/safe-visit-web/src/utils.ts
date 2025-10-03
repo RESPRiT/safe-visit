@@ -1,133 +1,74 @@
-// from: packages/tome-kolmafia-lib/src/api/base.ts
-type ApiRequest = {
-  properties?: readonly string[];
-  functions?: readonly { name: string; args: unknown[] }[];
-};
+import { remoteFunctions, remoteProperties } from "./api";
 
-type ApiResponse = {
-  properties?: string[];
-  functions?: unknown[];
-};
+// DOM helpers
 
-export async function remoteProperty(property: string) {
-  const pwd = await getHash();
-  const res = await apiCall(
-    {
-      properties: [property],
-    },
-    pwd
-  );
+export const findHrefRoot = (node: Node) => {
+  // We have to do this to get types because of ~realms~:
+  // Basically, the <frames> have their own constructors for
+  //  things like Window, etc., which breaks typechecks,
+  //  so you need to access their realm-local constructors
+  const w: Window & typeof globalThis =
+    node.ownerDocument?.defaultView || window;
 
-  // property doesn't exist
-  if (res.properties === undefined) return null;
-
-  return res.properties[0];
-}
-
-export async function remoteFunction(
-  name: string,
-  args: (string | number)[] = []
-) {
-  const pwd = await getHash();
-  const res = await apiCall(
-    {
-      functions: [{ name, args }],
-    },
-    pwd
-  );
-
-  // void functions
-  if (res.functions === undefined) return null;
-
-  return res.functions[0];
-}
-
-export async function remoteFunctions(
-  names: string[],
-  args?: (string | number)[][]
-) {
-  const pwd = await getHash();
-  const res = await apiCall(
-    {
-      functions: names.map((name, i) => ({
-        name,
-        args: args === undefined ? [] : args[i],
-      })),
-    },
-    pwd
-  );
-
-  // void functions
-  if (res.functions === undefined) return null;
-
-  return res.functions;
-}
-
-export async function apiCall(
-  request: ApiRequest,
-  pwd: string
-): Promise<ApiResponse> {
-  const response = await fetch(
-    "http://127.0.0.1:60080/KoLmafia/jsonApi/KoLmafia/jsonApi",
-    {
-      method: "post",
-      body: new URLSearchParams({
-        body: JSON.stringify(request),
-        pwd,
-      }),
-      headers: {
-        // Mafia only accepts this format.
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+  while (node !== null && !(node instanceof w.Document)) {
+    if (
+      node instanceof w.HTMLAnchorElement ||
+      node instanceof w.HTMLAreaElement
+    ) {
+      return node;
     }
+    if (!(node instanceof w.Node))
+      throw new Error("Root node of target isn't a document");
+
+    node = node.parentNode as Node;
+  }
+
+  return null;
+};
+
+export const visitUrl = (href: string) => {
+  const frame: HTMLFrameElement | null = document.querySelector(
+    "frame[name=mainpane]"
   );
-  if (response.status === 401) {
-    // our pwd is stale, refresh
-    window.location.reload();
-  }
+  if (frame === null || frame.contentWindow === null)
+    throw new Error("Could not find mainpane window");
+  frame.contentWindow.location.href = href; // setting href visits link
+};
 
-  const json = await response.json();
-  if ("error" in json) {
-    throw new Error(json.error);
-  }
-  return json;
+// API helpers
+
+// https://github.com/loathers/libram/blob/9e23d8614fafcbf45631dc1634553e12524b3802/src/lib.ts#L936
+export async function canVisitUrl(): Promise<boolean> {
+  const res = await remoteFunctions([
+    "currentRound",
+    "inMultiFight",
+    "choiceFollowsFight",
+    "handlingChoice",
+  ]);
+  if (res === null) throw new Error("canVisitUrl() should not return null");
+  return res.every((ret) => !ret);
 }
 
-// from: packages/tome-kolmafia-lib/src/api/hash.ts
-declare global {
-  interface Window {
-    mainpane?: Window;
+export async function notifyUser() {
+  const prefs = await remoteProperties([
+    "_safeVisitSessionNotify",
+    "safeVisitNotify",
+  ]);
+
+  const notify = !prefs.some((p) => p === "false");
+  if (notify) {
+    remoteFunctions(
+      ["printHtml", "setProperty"],
+      [
+        [
+          `<span color="orange">If you are seeing this message, safe-visit is active in your relay browser. When enabled, safe-visit adds 10-20ms (0.01 seconds) of latency to browser actions. To prevent this message from appearing again, use the following command:</span>
+        
+          set safeVisitNotify = false
+          `,
+        ],
+        ["_safeVisitSessionNotify", "false"],
+      ]
+    );
   }
-}
-
-const PWD_RE = /pwd:\s+"([0-9a-f]+)"/m;
-let lastHash: string | null = null;
-export function getHashIfAvailable(): string {
-  if (lastHash) return lastHash;
-
-  const current =
-    window.parent.frames.mainpane?.document?.body?.innerHTML?.match(
-      PWD_RE
-    )?.[1];
-  if (current !== undefined) {
-    lastHash = current;
-  }
-  return lastHash ?? "";
-}
-
-export async function updateHashFromServer(): Promise<void> {
-  const response = await fetch("/api.php?what=status&for=safe-visit");
-  const apiObject = await response.json();
-  const newHash = apiObject?.pwd ?? null;
-  lastHash = newHash;
-}
-
-export async function getHash(): Promise<string> {
-  const attempt = getHashIfAvailable();
-  if (attempt === "") {
-    await updateHashFromServer();
-    return lastHash ?? "";
-  } else {
-    return attempt;
-  }
+  return notify;
 }

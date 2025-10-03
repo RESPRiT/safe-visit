@@ -28,14 +28,14 @@ TO-DO:
 - [x] Add eventlistener to re-attach click listeners whenever frame content reloads
 - [x] Update mafia checks to use API calls
 - [x] Clean up console logs and unused logic
-- [ ] Clean up use of async
+- [x] Clean up use of async
 - [ ] Need to hardcode certain exceptions into canVisitUrl(), e.g. the Witchess chess can be escaped from at any time.
 - [x] Add a timeout to the polling
   - [ ] On timeout, allow user to proceed anyways (or keep waiting?)
 - [ ] Allow the ability to toggle waiting
   - [ ] Is there a way to check if a script is currently running to auto-toggle?
 - [ ] Extra niceties
-  - [ ] Improve polling by disallowing overlapping POST requests
+  - [x] Improve polling by disallowing overlapping POST requests
   - [ ] Special hagnk handling
 
 # utils.ts
@@ -43,16 +43,15 @@ TO-DO:
 
 # dom.ts
 - [x] Drawing loading indicator to show when requests have been paused
-  - [ ] Add timeout indicator
-  - [ ] Add timer
+  - [x] Add timeout indicator
+  - [x] Add timer
 - [ ] Visual indicator that `safe-visit` is active
 
 # misc
-- [ ] Allow user to easily disable `safe-visit`
 - [ ] Is it possible to also handle and delay chat macros?
 
 # Architecture
-- [ ] Possibly refactor mafia API logic into its own script
+- [x] Possibly refactor mafia API logic into its own script
 
 # Notes
 ## How It Works
