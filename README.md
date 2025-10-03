@@ -20,7 +20,7 @@ TO-DO:
 - [o] Setup symlinks between dist folders and mafia folder
 - [ ] Setup build files for monorepo building
   - [ ] package.json
-- [ ] Setup git workflow for release branch
+- [ ] Setup GitHub workflow for release branch
 
 # index.ts
 - [x] ~~Create observer that re-attaches click listeners whenever a new frame is loaded~~
