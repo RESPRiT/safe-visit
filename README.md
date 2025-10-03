@@ -36,20 +36,50 @@ TO-DO:
   - [ ] Is there a way to check if a script is currently running to auto-toggle?
 - [ ] Extra niceties
   - [ ] Improve polling by disallowing overlapping POST requests
+  - [ ] Special hagnk handling
 
 # utils.ts
 - [x] Implement (copy) mafia API logic
 
 # dom.ts
-- [ ] Drawing loading indicator to show when requests have been paused
+- [x] Drawing loading indicator to show when requests have been paused
+  - [ ] Add timeout indicator
+  - [ ] Add timer
+- [ ] Visual indicator that `safe-visit` is active
 
 # misc
 - [ ] Allow user to easily disable `safe-visit`
+- [ ] Is it possible to also handle and delay chat macros?
 
 # Architecture
 - [ ] Possibly refactor mafia API logic into its own script
 
 # Notes
+## How It Works
+Here is an overview of exactly what `safe-visit` does:
+- Relay browser is opened for the first time
+  - Relay browser opens to `main.php`; mafia calls `relay/main.js`
+  - `main.js` modifies the HTML of `main.php` to include a `<script>` tag in the `<head>` of `<frame name="mainpane">`, linked to `relay/safe-visit/hook.js`[^1]
+  - `hook.js` modifies the HTML outside of its `<frame>` to include a `<script>` tag in the `<head>` of the root document (i.e. the "top" of the webpage), linked to `relay/safe-visit/index.js`
+  - `index.js` finds all the `<frame>` elements on the page (i.e. charpane, topmenu, mainpane, chatpane), and attaches two event handlers[^2]:
+    - The first handler listens for user input (see below)
+    - The second handler re-attaches the first handler to the `<frame>` if its contents are reloaded
+  - `index.js` remains active on the webpage for the rest of the session (but, doesn't do anything else)
+- safe-visit is active
+  - On any user inputs (i.e. mouse, keyboard press), the handler:
+    - Checks if that input was a "link visit," and, if so, whether or not to handle it
+      - If the input should be handled, the link visit is intercepted and paused
+    - While paused, the handler asks mafia if the link is "safe" to visit via a `POST` request[^3][^4]
+      - If yes, the handler unpauses
+      - If not, the handler continues to pause, checking in with mafia at increasing intervals (80ms, 160ms, 320ms, etc.)
+        - After 10s, if mafia still says that the link is "unsafe," the handler times out and unpauses
+    - Finally, the link is visited as usual
+
+[^1]: Relay scripts only modify the contents of the `<frame>` document they're loaded into, which is reloaded on most actions; in order for injected scripts to persist, they need to exist at the root of the document
+[^2]: `<frame>` elements (and `<iframe>`s) do not propegate events upwards, so listeners must be attached to them directly in order to capture things like user input.
+[^3]: Browser scripts can interact with mafia via the [Browser JSON API](https://wiki.kolmafia.us/index.php?title=Browser_JSON_API)
+[^4]: "Safe visit" criteria is based on [libram `canVisitUrl()` logic](https://github.com/loathers/libram/blob/9e23d8614fafcbf45631dc1634553e12524b3802/src/lib.ts#L936)
+
 ## Benchmarks
 Informal rough testing on my machine showed that:
 - The hook and event listener logic added trivial load times: ~1-2ms
@@ -93,13 +123,21 @@ However, for informational scripts, which retrieve information from mafia that i
 actions, having additional threads can be quite useful!
 
 ## Limitations
+### Page becomes unavailable while loading
 This script can intercept the start of a request to visit a URL, but once the request has been made, the
-script cannot prevent the response from being loaded by the browser.
+script cannot prevent the response from being loaded by the browser if it will result in a clash.
 
-I don't know the exact behavior of this, but for certain links, such as visiting the Hall of Champions,
-where pages can take a long time to load (a few seconds), this _might_ mean that sometimes a script will
-clash with user navigation during the load time. This would only happen if the server refuses to send
-the response for the page if it detects that the player is not interuptable, **and I don't know if that's
-what it does.**
+For instance: you click on your inventory, and during the time it takes your inventory to load, mafia
+enters combat. In this situation, you will load into combat rather than your inventory.
 
-This might not be a limitation, at all.
+#### Note
+When this happens, KOL responds with a 302 status code, with a redirect to the "clash" URL in the
+"Location" header property.
+- Sometimes this is desired behavior, like aliases (`town.php` => `place.php?whichplace=town`, `island.php` => `bigisland.php`)
+- The unwanted behavior would be when `fight.php` or `choice.php` are redirects for...?
+  - Anything besides `adventure.php` or `inv_use.php`?
+  - How else can combats and inescapable choice adventures be triggered?
+
+### Adventuring and choice adventures
+You should **NOT** spend turns or enter choice adventure interactions while using `safe-visit`, as they
+will disrupt your active script. `safe-visit` won't stop you from doing so, so it's on you not to.

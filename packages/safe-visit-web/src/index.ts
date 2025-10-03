@@ -1,4 +1,7 @@
+import { appendLoadingDiv } from "./dom";
 import { remoteFunction, remoteFunctions } from "./utils";
+
+let locked = false;
 
 async function canVisitUrl(): Promise<boolean> {
   const res = await remoteFunctions([
@@ -14,6 +17,7 @@ async function canVisitUrl(): Promise<boolean> {
 
 async function waitForMafia() {
   // **SETUP HANDLER FOR LISTENER**
+  // We use the MouseEvent type, but this logic also works for key input
   async function handler(e: MouseEvent) {
     // STEP 1: CONDITIONAL CLICK HIJACKING
     if (e.defaultPrevented) return;
@@ -67,26 +71,33 @@ async function waitForMafia() {
       return;
     if (e.button !== 0) return; // only trigger on left-click
     e.preventDefault();
+    if (locked) return;
 
     // STEP 2: DELAY FUNCTION
     async function waitUntilCanVisit() {
       return new Promise((resolve) => {
         const start = Date.now();
 
-        async function check(delay = 80) {
+        async function check(delay: number, first = false) {
           const canVisit = await canVisitUrl();
           if (canVisit) {
+            locked = false;
             resolve(Date.now() - start);
-          } else if (Date.now() - start < 5000) {
+          } else if (Date.now() - start < 10000) {
+            if (first) appendLoadingDiv();
+            locked = true;
             setTimeout(() => check(delay * 2), delay);
           } else {
+            locked = false;
             resolve(
-              console.error("5s timeout waiting for mafia, proceeding unsafely")
+              console.error(
+                "10s timeout waiting for mafia, proceeding unsafely"
+              )
             );
           }
         }
 
-        check();
+        check(80, true);
       });
     }
     await waitUntilCanVisit();
@@ -109,18 +120,18 @@ async function waitForMafia() {
 
   // **ATTACH HANDLER TO FRAMES**
   const frames = document.querySelectorAll("frame");
-  for (const frame of frames) {
+  frames.forEach((frame) => {
     // re-attach handler whenever frame content is reloaded
     //  sometimes, this is redundant (i.e. toast-style pop-ups)
     //  but, that's OK, because the listener is not double-added
     frame.addEventListener("load", () => attachHandler(frame));
     attachHandler(frame);
-  }
+  });
 
   console.log("[safe-visit] Script is now active");
   remoteFunction("print", [
     "If you are seeing this message, safe-visit is active in your relay browser. To disable safe-visit, [do X].",
-    "green",
+    "orange",
   ]);
   // **CONICALLY RETURN UN-LISTEN CALLBACK**
   return () =>
